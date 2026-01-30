@@ -3878,5 +3878,146 @@ if ('serviceWorker' in navigator) {
 }
 // --- END PWA Service Worker Registration ---
 </script>
+
+<!-- ===== AI CHAT OPTION (does not change existing UI) ===== -->
+<button id="aiChatBtnFloating" aria-label="AI Chat" style="
+  position: fixed; left: 18px; bottom: 18px; z-index: 999999;
+  background:#0b5cff; color:#fff; border:none; padding:12px 14px;
+  border-radius: 999px; cursor:pointer; font-weight:700;
+  box-shadow:0 8px 20px rgba(0,0,0,.25);
+">
+  💬 شات AI
+</button>
+
+<div id="aiChatOverlay" style="
+  display:none; position: fixed; inset:0; z-index: 1000000;
+  background: rgba(0,0,0,.45);
+">
+  <div style="
+    width: min(480px, 94vw); height: min(680px, 88vh);
+    background:#0f172a; color:#e5e7eb;
+    border-radius:16px; position:absolute; left:18px; bottom:18px;
+    display:flex; flex-direction:column; overflow:hidden;
+    box-shadow:0 20px 60px rgba(0,0,0,.45);
+    border:1px solid rgba(255,255,255,.08);
+  ">
+    <div style="padding:12px 14px; display:flex; align-items:center; justify-content:space-between; background:#111827;">
+      <div style="font-weight:800">Mo’een AI Chat</div>
+      <div style="display:flex; gap:8px;">
+        <button id="aiChatClear" style="background:#1f2937;color:#fff;border:none;padding:8px 10px;border-radius:10px;cursor:pointer;">مسح</button>
+        <button id="aiChatClose" style="background:#ef4444;color:#fff;border:none;padding:8px 10px;border-radius:10px;cursor:pointer;">✕</button>
+      </div>
+    </div>
+
+    <div id="aiChatBox" style="
+      padding:12px; overflow:auto; flex:1; background:#0f172a;
+      display:flex; flex-direction:column; gap:10px;
+    "></div>
+
+    <form id="aiChatForm" style="display:flex; gap:8px; padding:12px; background:#111827;">
+      <input id="aiChatInput" type="text" placeholder="اكتب سؤالك هنا..."
+        style="flex:1; padding:10px 12px; border-radius:12px; border:1px solid #374151; background:#0f172a; color:#fff; outline:none;" />
+      <button id="aiChatSend" type="submit" style="padding:10px 14px;border-radius:12px;border:none;background:#22c55e;color:#0b1220;font-weight:800;cursor:pointer;">
+        إرسال
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ✅ حط رابط الـ Backend بتاعك هنا (Railway/Render) بدون "/" في الآخر
+  const AI_BASE_URL = "https://moaeen-triage-backend-production.up.railway.app";
+
+  const openBtn = document.getElementById("aiChatBtnFloating");
+  const overlay = document.getElementById("aiChatOverlay");
+  const closeBtn = document.getElementById("aiChatClose");
+  const clearBtn = document.getElementById("aiChatClear");
+  const form = document.getElementById("aiChatForm");
+  const input = document.getElementById("aiChatInput");
+  const box = document.getElementById("aiChatBox");
+
+  function addBubble(text, who){
+    const div = document.createElement("div");
+    div.style.maxWidth = "85%";
+    div.style.padding = "10px 12px";
+    div.style.borderRadius = "14px";
+    div.style.whiteSpace = "pre-wrap";
+    div.style.lineHeight = "1.5";
+    div.style.fontSize = "14px";
+    div.style.alignSelf = who === "user" ? "flex-end" : "flex-start";
+    div.style.background = who === "user" ? "#2563eb" : "#1f2937";
+    div.textContent = text;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function setOverlay(show){
+    overlay.style.display = show ? "block" : "none";
+    if(show) setTimeout(()=>input.focus(), 50);
+  }
+
+  // Safe bindings (won't break if something missing)
+  if(openBtn) openBtn.addEventListener("click", ()=>setOverlay(true));
+  if(closeBtn) closeBtn.addEventListener("click", ()=>setOverlay(false));
+  if(clearBtn) clearBtn.addEventListener("click", ()=>{ box.innerHTML=""; });
+
+  if(overlay){
+    overlay.addEventListener("click", (e)=>{ if(e.target === overlay) setOverlay(false); });
+  }
+
+  if(form){
+    form.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      const text = (input.value || "").trim();
+      if(!text) return;
+
+      addBubble(text, "user");
+      input.value = "";
+
+      const typing = document.createElement("div");
+      typing.style.alignSelf = "flex-start";
+      typing.style.background = "#111827";
+      typing.style.padding = "10px 12px";
+      typing.style.borderRadius = "14px";
+      typing.textContent = "…";
+      box.appendChild(typing);
+      box.scrollTop = box.scrollHeight;
+
+      try{
+        // Prefer /api/chat, fallback to /api/triage
+        let resp = await fetch(AI_BASE_URL + "/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text, lang: "ar" })
+        });
+
+        let data = await resp.json().catch(()=> ({}));
+
+        if(!resp.ok || (!data.reply && !data.reply_ar)){
+          resp = await fetch(AI_BASE_URL + "/api/triage", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text, lang: "ar" })
+          });
+          data = await resp.json().catch(()=> ({}));
+        }
+
+        typing.remove();
+        const reply = data.reply || data.reply_ar || data.output || data.summary || "حصلت مشكلة في الرد.";
+        addBubble(reply, "bot");
+      } catch(err){
+        typing.remove();
+        addBubble("مش قادر أوصل للسيرفر دلوقتي. جرّب تاني.", "bot");
+      }
+    });
+  }
+
+  // Greeting
+  addBubble("أهلًا! اكتب سؤالك وهرد عليك.", "bot");
+})();
+</script>
+<!-- ===== END AI CHAT OPTION ===== -->
+
 </body>
 </html>
