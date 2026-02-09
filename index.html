@@ -140,7 +140,7 @@ p { color: var(--muted); margin-bottom: 1rem; }
   min-height: 30vh; 
 }
 
-\1will-change: transform, text-shadow;
+will-change: transform, text-shadow;
   animation: pulse-moeen 2.4s ease-in-out infinite alternate, glow-pulse 3.4s ease-in-out infinite alternate; 
 }
 
@@ -187,7 +187,7 @@ p { color: var(--muted); margin-bottom: 1rem; }
 /* Input Group */
 .input-group { margin-bottom: 1rem; }
 .input-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text); }
-\1
+
   border-radius: var(--radius-md);
   background: var(--card-bg);
   color: var(--text);
@@ -773,6 +773,13 @@ section{
   .hti-logo{width:56px;height:56px;margin-left:auto}
 }
 /* --- End Developers Page --- */
+
+
+/* --- Voice UI helpers --- */
+#voiceStatus.listening{ font-weight:800; }
+@keyframes micPulse { 0%{ transform:scale(1); } 100%{ transform:scale(1.03); } }
+.micPulse{ animation: micPulse .8s ease-in-out infinite alternate; }
+
 </style>
 </head>
 <body>
@@ -983,7 +990,32 @@ section{
 
             <div class="input-group">
                 <label id="askLabel" for="askInput">وصف حالتك</label>
-                <textarea id="askInput" rows="6" style="direction: rtl;" placeholder="مثال: بقالي أسبوعين مش بنام كويس وقلقان طول الوقت..."></textarea>
+                <textarea id="askInput" rows="6" style="direction: rtl;" placeholder="مثال: بقالي أسبوعين مش بنام كويس وقلقان طول الوقت..."></textarea></textarea>
+
+            <!-- 🎙️ Voice: record & live dictation (browser-native) -->
+            <div class="card" id="voiceCard" style="margin-top:1rem;">
+                <h3 id="voiceTitle" style="margin-top:0;">🎙️ الصوت</h3>
+                <p id="voiceHint" class="text-muted" style="margin-bottom:.75rem;">
+                    تقدر تسجل صوتك (Audio) أو تعمل إملاء صوتي مباشر (Dictation) ويتكتب في خانة النص.
+                </p>
+
+                <div style="display:flex; gap:.6rem; flex-wrap:wrap; justify-content:center;">
+                    <button id="dictateBtn" class="btn secondary" type="button">🎤 إملاء مباشر</button>
+                    <button id="dictateStopBtn" class="btn secondary" type="button" style="display:none;">⏹️ إيقاف الإملاء</button>
+
+                    <button id="recBtn" class="btn primary" type="button">⏺️ تسجيل</button>
+                    <button id="recStopBtn" class="btn secondary" type="button" style="display:none;">⏹️ إيقاف التسجيل</button>
+                </div>
+
+                <div id="voiceStatus" class="text-muted" style="margin-top:.75rem; text-align:center;"></div>
+
+                <div id="voicePlayback" style="margin-top:.75rem; display:none; text-align:center;">
+                    <audio id="recAudio" controls style="width:min(520px, 100%);"></audio>
+                    <div style="margin-top:.5rem;">
+                        <a id="recDownload" class="btn secondary" download="moeen_recording.webm" href="javascript:void(0)">⬇️ تنزيل التسجيل</a>
+                    </div>
+                </div>
+            </div>
             </div>
 
             <div style="display:flex; gap:.75rem; flex-wrap:wrap; justify-content:center;">
@@ -3879,216 +3911,345 @@ if ('serviceWorker' in navigator) {
 // --- END PWA Service Worker Registration ---
 </script>
 
-<!-- ===== Mo'een AI Chat (Single-file safe widget) ===== -->
-<style>
-  #aiChatFab {
-    position: fixed; left: 18px; bottom: 18px; z-index: 2147483646;
-    background: #0b5cff; color: #fff; border: 0; border-radius: 999px;
-    padding: 12px 14px; font-weight: 700; cursor: pointer;
-    box-shadow: 0 10px 26px rgba(0,0,0,.25);
-  }
-  #aiChatModalOverlay {
-    position: fixed; inset: 0; z-index: 2147483647;
-    background: rgba(0,0,0,.45);
-    display: none;
-  }
-  #aiChatModal {
-    position: absolute;
-    left: 18px; bottom: 18px;
-    width: min(460px, 92vw);
-    height: min(640px, 86vh);
-    background: #0f172a;
-    color: #e5e7eb;
-    border-radius: 18px;
-    overflow: hidden;
-    box-shadow: 0 24px 80px rgba(0,0,0,.5);
-    display: flex;
-    flex-direction: column;
-  }
-  #aiChatHeader {
-    display:flex; align-items:center; justify-content:space-between;
-    padding: 12px 14px; background:#111827;
-    border-bottom: 1px solid rgba(255,255,255,.08);
-  }
-  #aiChatHeader .title {
-    font-weight: 800;
-  }
-  #aiChatHeader .actions {
-    display:flex; gap: 8px; align-items:center;
-  }
-  #aiChatHeader button {
-    border: 0; border-radius: 10px; cursor:pointer;
-    padding: 8px 10px; font-weight: 700;
-  }
-  #aiChatClose { background:#ef4444; color:#fff; }
-  #aiChatClear { background:#1f2937; color:#fff; }
-  #aiChatBox {
-    flex: 1;
-    padding: 12px;
-    overflow: auto;
-    display:flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .aiMsg {
-    max-width: 85%;
-    padding: 10px 12px;
-    border-radius: 14px;
-    white-space: pre-wrap;
-    line-height: 1.5;
-    font-size: 14px;
-  }
-  .aiUser { align-self:flex-end; background:#2563eb; color:#fff; }
-  .aiBot { align-self:flex-start; background:#1f2937; color:#e5e7eb; }
-  #aiChatComposer {
-    display:flex; gap: 10px;
-    padding: 12px; background:#111827;
-    border-top: 1px solid rgba(255,255,255,.08);
-  }
-  #aiChatInput {
-    flex: 1;
-    padding: 10px 12px;
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,.14);
-    background:#0f172a;
-    color:#fff;
-    outline: none;
-  }
-  #aiChatSend {
-    padding: 10px 14px;
-    border-radius: 12px;
-    border: 0;
-    background:#22c55e;
-    color:#06101f;
-    font-weight: 900;
-    cursor:pointer;
-  }
-  #aiChatHint {
-    padding: 10px 12px;
-    font-size: 12px;
-    opacity: .8;
-  }
-</style>
+<!-- ===== AI CHAT OPTION (does not change existing UI) ===== -->
+<button id="aiChatBtnFloating" aria-label="AI Chat" style="
+  position: fixed; left: 18px; bottom: 18px; z-index: 999999;
+  background:#0b5cff; color:#fff; border:none; padding:12px 14px;
+  border-radius: 999px; cursor:pointer; font-weight:700;
+  box-shadow:0 8px 20px rgba(0,0,0,.25);
+">
+  💬 شات AI
+</button>
 
-<button id="aiChatFab" type="button" aria-label="AI Chat">💬 شات AI</button>
-
-<div id="aiChatModalOverlay" role="dialog" aria-modal="true" aria-label="Mo'een AI Chat">
-  <div id="aiChatModal">
-    <div id="aiChatHeader">
-      <div class="title">Mo'een — شات AI</div>
-      <div class="actions">
-        <button id="aiChatClear" type="button">مسح</button>
-        <button id="aiChatClose" type="button">✕</button>
+<div id="aiChatOverlay" style="
+  display:none; position: fixed; inset:0; z-index: 1000000;
+  background: rgba(0,0,0,.45);
+">
+  <div style="
+    width: min(480px, 94vw); height: min(680px, 88vh);
+    background:#0f172a; color:#e5e7eb;
+    border-radius:16px; position:absolute; left:18px; bottom:18px;
+    display:flex; flex-direction:column; overflow:hidden;
+    box-shadow:0 20px 60px rgba(0,0,0,.45);
+    border:1px solid rgba(255,255,255,.08);
+  ">
+    <div style="padding:12px 14px; display:flex; align-items:center; justify-content:space-between; background:#111827;">
+      <div style="font-weight:800">Mo’een AI Chat</div>
+      <div style="display:flex; gap:8px;">
+        <button id="aiChatClear" style="background:#1f2937;color:#fff;border:none;padding:8px 10px;border-radius:10px;cursor:pointer;">مسح</button>
+        <button id="aiChatClose" style="background:#ef4444;color:#fff;border:none;padding:8px 10px;border-radius:10px;cursor:pointer;">✕</button>
       </div>
     </div>
 
-    <div id="aiChatHint">اكتب سؤالك… (الشات بيستخدم الذكاء الاصطناعي عبر السيرفر)</div>
+    <div id="aiChatBox" style="
+      padding:12px; overflow:auto; flex:1; background:#0f172a;
+      display:flex; flex-direction:column; gap:10px;
+    "></div>
 
-    <div id="aiChatBox"></div>
-
-    <form id="aiChatForm" autocomplete="off">
-      <div id="aiChatComposer">
-        <input id="aiChatInput" type="text" placeholder="اكتب هنا..." />
-        <button id="aiChatSend" type="submit">إرسال</button>
-      </div>
+    <form id="aiChatForm" style="display:flex; gap:8px; padding:12px; background:#111827;">
+      <input id="aiChatInput" type="text" placeholder="اكتب سؤالك هنا..."
+        style="flex:1; padding:10px 12px; border-radius:12px; border:1px solid #374151; background:#0f172a; color:#fff; outline:none;" />
+      <button id="aiChatSend" type="submit" style="padding:10px 14px;border-radius:12px;border:none;background:#22c55e;color:#0b1220;font-weight:800;cursor:pointer;">
+        إرسال
+      </button>
     </form>
   </div>
 </div>
 
 <script>
-(() => {
-  const BACKEND = "https://moaeen-triage-backend-production.up.railway.app";
-  const overlay = document.getElementById("aiChatModalOverlay");
-  const fab = document.getElementById("aiChatFab");
+(function(){
+  // ✅ حط رابط الـ Backend بتاعك هنا (Railway/Render) بدون "/" في الآخر
+  const AI_BASE_URL = "https://moaeen-triage-backend-production.up.railway.app";
+
+  const openBtn = document.getElementById("aiChatBtnFloating");
+  const overlay = document.getElementById("aiChatOverlay");
   const closeBtn = document.getElementById("aiChatClose");
   const clearBtn = document.getElementById("aiChatClear");
-  const box = document.getElementById("aiChatBox");
   const form = document.getElementById("aiChatForm");
   const input = document.getElementById("aiChatInput");
+  const box = document.getElementById("aiChatBox");
 
-  if (!overlay || !fab || !closeBtn || !clearBtn || !box || !form || !input) return;
-
-  const add = (text, who) => {
+  function addBubble(text, who){
     const div = document.createElement("div");
-    div.className = "aiMsg " + (who === "user" ? "aiUser" : "aiBot");
+    div.style.maxWidth = "85%";
+    div.style.padding = "10px 12px";
+    div.style.borderRadius = "14px";
+    div.style.whiteSpace = "pre-wrap";
+    div.style.lineHeight = "1.5";
+    div.style.fontSize = "14px";
+    div.style.alignSelf = who === "user" ? "flex-end" : "flex-start";
+    div.style.background = who === "user" ? "#2563eb" : "#1f2937";
     div.textContent = text;
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
-  };
-
-  const setOpen = (open) => {
-    overlay.style.display = open ? "block" : "none";
-    if (open) setTimeout(() => input.focus(), 0);
-  };
-
-  fab.addEventListener("click", () => setOpen(true));
-  closeBtn.addEventListener("click", () => setOpen(false));
-  clearBtn.addEventListener("click", () => { box.innerHTML = ""; });
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) setOpen(false);
-  });
-
-  async function callAI(message) {
-    // Try /api/chat first (message field)
-    const endpoints = [
-      { url: BACKEND + "/api/chat", body: { message } },
-      // fallback for older triage endpoint if exists
-      { url: BACKEND + "/api/triage", body: { text: message, lang: "ar" } },
-    ];
-
-    let lastErr = null;
-    for (const ep of endpoints) {
-      try {
-        const r = await fetch(ep.url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(ep.body)
-        });
-        const data = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(data.detail || data.error || ("HTTP " + r.status));
-        // normalize outputs
-        if (typeof data.reply === "string") return data.reply;
-        if (typeof data.output_text === "string") return data.output_text;
-        if (typeof data.message === "string") return data.message;
-        if (typeof data.advice === "string") return data.advice;
-        if (Array.isArray(data.advice)) return data.advice.join("\n");
-        return JSON.stringify(data);
-      } catch (e) {
-        lastErr = e;
-      }
-    }
-    throw lastErr || new Error("AI request failed");
   }
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const text = (input.value || "").trim();
-    if (!text) return;
-    add(text, "user");
-    input.value = "";
+  function setOverlay(show){
+    overlay.style.display = show ? "block" : "none";
+    if(show) setTimeout(()=>input.focus(), 50);
+  }
 
-    const typing = document.createElement("div");
-    typing.className = "aiMsg aiBot";
-    typing.textContent = "جاري الرد...";
-    box.appendChild(typing);
-    box.scrollTop = box.scrollHeight;
+  // Safe bindings (won't break if something missing)
+  if(openBtn) openBtn.addEventListener("click", ()=>setOverlay(true));
+  if(closeBtn) closeBtn.addEventListener("click", ()=>setOverlay(false));
+  if(clearBtn) clearBtn.addEventListener("click", ()=>{ box.innerHTML=""; });
 
-    try {
-      const reply = await callAI(text);
-      typing.remove();
-      add(reply, "bot");
-    } catch (err) {
-      typing.remove();
-      add("حصل خطأ في الاتصال بالشات. اتأكد إن السيرفر شغال.", "bot");
-      // log for debugging without breaking app
-      console.error("AI chat error:", err);
+  if(overlay){
+    overlay.addEventListener("click", (e)=>{ if(e.target === overlay) setOverlay(false); });
+  }
+
+  if(form){
+    form.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      const text = (input.value || "").trim();
+      if(!text) return;
+
+      addBubble(text, "user");
+      input.value = "";
+
+      const typing = document.createElement("div");
+      typing.style.alignSelf = "flex-start";
+      typing.style.background = "#111827";
+      typing.style.padding = "10px 12px";
+      typing.style.borderRadius = "14px";
+      typing.textContent = "…";
+      box.appendChild(typing);
+      box.scrollTop = box.scrollHeight;
+
+      try{
+        // Prefer /api/chat, fallback to /api/triage
+        let resp = await fetch(AI_BASE_URL + "/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text, lang: "ar" })
+        });
+
+        let data = await resp.json().catch(()=> ({}));
+
+        if(!resp.ok || (!data.reply && !data.reply_ar)){
+          resp = await fetch(AI_BASE_URL + "/api/triage", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text, lang: "ar" })
+          });
+          data = await resp.json().catch(()=> ({}));
+        }
+
+        typing.remove();
+        const reply = data.reply || data.reply_ar || data.output || data.summary || "حصلت مشكلة في الرد.";
+        addBubble(reply, "bot");
+      } catch(err){
+        typing.remove();
+        addBubble("مش قادر أوصل للسيرفر دلوقتي. جرّب تاني.", "bot");
+      }
+    });
+  }
+
+  // Greeting
+  addBubble("أهلًا! اكتب سؤالك وهرد عليك.", "bot");
+})();
+
+
+/* =========================================================
+   🎙️ Voice Recording + Live Dictation (Browser-native)
+   - Recording: MediaRecorder (saves audio blob for playback/download)
+   - Dictation: Web Speech API SpeechRecognition (Chrome/Edge; not 100% on all browsers)
+   ========================================================= */
+(function(){
+  const $ = (id)=>document.getElementById(id);
+
+  // ---------- Recording (MediaRecorder) ----------
+  let mediaStream = null;
+  let recorder = null;
+  let chunks = [];
+
+  async function startRecording(){
+    try{
+      $('voicePlayback').style.display = 'none';
+      setVoiceStatus(isArabic() ? 'جاري طلب صلاحية الميكروفون…' : 'Requesting microphone permission…');
+
+      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      chunks = [];
+      recorder = new MediaRecorder(mediaStream, { mimeType: 'audio/webm' });
+
+      recorder.ondataavailable = (e)=>{ if(e.data && e.data.size) chunks.push(e.data); };
+      recorder.onstop = ()=>{
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        $('recAudio').src = url;
+        $('recDownload').href = url;
+        $('voicePlayback').style.display = 'block';
+
+        // stop mic tracks
+        try{ mediaStream.getTracks().forEach(t=>t.stop()); }catch(_){}
+        mediaStream = null;
+
+        setVoiceStatus(isArabic() ? 'تم حفظ التسجيل ✅' : 'Recording saved ✅');
+      };
+
+      recorder.start();
+      toggleRecUI(true);
+      setVoiceStatus(isArabic() ? 'جاري التسجيل…' : 'Recording…', true);
+    }catch(err){
+      console.error(err);
+      toggleRecUI(false);
+      setVoiceStatus(isArabic()
+        ? 'مش قادر أفتح الميكروفون. اتأكد إن الصلاحية مفعّلة في المتصفح.'
+        : 'Cannot access microphone. Please enable permission in your browser.'
+      );
     }
+  }
+
+  function stopRecording(){
+    try{
+      if(recorder && recorder.state !== 'inactive') recorder.stop();
+      toggleRecUI(false);
+    }catch(err){
+      console.error(err);
+      toggleRecUI(false);
+    }
+  }
+
+  function toggleRecUI(isRec){
+    const recBtn = $('recBtn'), recStopBtn = $('recStopBtn');
+    if(!recBtn || !recStopBtn) return;
+    recBtn.style.display = isRec ? 'none' : 'inline-block';
+    recStopBtn.style.display = isRec ? 'inline-block' : 'none';
+    recBtn.classList.toggle('micPulse', isRec);
+  }
+
+  // ---------- Dictation (SpeechRecognition) ----------
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition = null;
+  let dictating = false;
+
+  function initRecognition(){
+    if(!SR) return null;
+    const r = new SR();
+    r.continuous = true;
+    r.interimResults = true;
+    r.lang = isArabic() ? 'ar-EG' : 'en-US';
+    return r;
+  }
+
+  function startDictation(){
+    if(!SR){
+      setVoiceStatus(isArabic()
+        ? 'الإملاء الصوتي مش مدعوم على المتصفح ده. جرّب Chrome/Edge.'
+        : 'Dictation is not supported on this browser. Try Chrome/Edge.'
+      );
+      return;
+    }
+    if(dictating) return;
+
+    recognition = initRecognition();
+    if(!recognition) return;
+
+    dictating = true;
+    toggleDictUI(true);
+    setVoiceStatus(isArabic() ? 'اسمعك… اتكلم طبيعي 👂' : 'Listening… speak normally 👂', true);
+
+    const target = $('askInput'); // we write directly into Ask text area
+    let finalText = '';
+
+    recognition.onresult = (event)=>{
+      let interim = '';
+      for(let i = event.resultIndex; i < event.results.length; i++){
+        const res = event.results[i];
+        const txt = (res[0] && res[0].transcript) ? res[0].transcript : '';
+        if(res.isFinal) finalText += txt + ' ';
+        else interim += txt;
+      }
+
+      // Append to existing user text safely
+      const base = target.value.trim();
+      const merged = (base ? base + '\n' : '') + finalText.trim() + (interim ? ('\n' + interim) : '');
+      target.value = merged.trim();
+
+      // Keep cursor at end
+      target.scrollTop = target.scrollHeight;
+    };
+
+    recognition.onerror = (e)=>{
+      console.error('SpeechRecognition error', e);
+      // Some errors are transient; show msg and stop
+      stopDictation();
+      setVoiceStatus(isArabic()
+        ? 'حصلت مشكلة في الإملاء الصوتي. جرّب تاني أو اتأكد من صلاحية الميكروفون.'
+        : 'Dictation error. Try again or check microphone permission.'
+      );
+    };
+
+    recognition.onend = ()=>{
+      // If ended unexpectedly while dictating, stop UI
+      if(dictating){
+        dictating = false;
+        toggleDictUI(false);
+        setVoiceStatus(isArabic() ? 'تم إيقاف الإملاء.' : 'Dictation stopped.');
+      }
+    };
+
+    try{ recognition.start(); }catch(e){
+      console.error(e);
+      dictating = false;
+      toggleDictUI(false);
+    }
+  }
+
+  function stopDictation(){
+    dictating = false;
+    toggleDictUI(false);
+    try{ if(recognition) recognition.stop(); }catch(_){}
+    recognition = null;
+  }
+
+  function toggleDictUI(isOn){
+    const b1 = $('dictateBtn'), b2 = $('dictateStopBtn');
+    if(!b1 || !b2) return;
+    b1.style.display = isOn ? 'none' : 'inline-block';
+    b2.style.display = isOn ? 'inline-block' : 'none';
+    b1.classList.toggle('micPulse', isOn);
+  }
+
+  // ---------- Helpers ----------
+  function isArabic(){
+    // If app.lang exists, prefer it; fallback to html lang
+    try{
+      if(window.app && window.app.lang) return window.app.lang === 'ar';
+    }catch(_){}
+    return (document.documentElement.lang || 'ar').toLowerCase().startsWith('ar');
+  }
+
+  function setVoiceStatus(msg, listening=false){
+    const el = $('voiceStatus');
+    if(!el) return;
+    el.textContent = msg || '';
+    el.classList.toggle('listening', !!listening);
+  }
+
+  // ---------- Bind UI ----------
+  window.addEventListener('DOMContentLoaded', ()=>{
+    const recBtn = $('recBtn'), recStopBtn = $('recStopBtn');
+    const dBtn = $('dictateBtn'), dStop = $('dictateStopBtn');
+
+    if(recBtn) recBtn.addEventListener('click', startRecording);
+    if(recStopBtn) recStopBtn.addEventListener('click', stopRecording);
+    if(dBtn) dBtn.addEventListener('click', startDictation);
+    if(dStop) dStop.addEventListener('click', stopDictation);
+
+    // Update status text based on language toggle
+    setVoiceStatus(isArabic()
+      ? 'جاهز. تقدر تسجل أو تعمل إملاء مباشر.'
+      : 'Ready. You can record or use live dictation.'
+    );
   });
 
-  // Safety: don't interfere with existing keyboard handlers
+  // Expose minimal hooks (optional)
+  window.moeenVoice = { startRecording, stopRecording, startDictation, stopDictation };
 })();
+
 </script>
-<!-- ===== End Mo'een AI Chat ===== -->
+<!-- ===== END AI CHAT OPTION ===== -->
 
 </body>
 </html>
