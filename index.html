@@ -1880,7 +1880,7 @@ class MoeenApp {
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try{
-      const r = await fetch('/api/triage', {
+      const r = await fetch('https://moaeen-triage-backend-production.up.railway.app/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, lang: this.lang }),
