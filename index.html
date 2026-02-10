@@ -851,6 +851,73 @@ section{
   background: rgba(255,255,255,0.04);
 }
 .docActions{ display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top:12px; }
+
+/* --- Appointments UI --- */
+.apptCard{
+  border:1px solid var(--border);
+  background: var(--card);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.06);
+}
+.apptCard .top{
+  display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap;
+}
+.apptCard .title{ font-weight:900; }
+.apptCard .meta{ color: var(--muted); font-size:.95rem; margin-top:4px; }
+.apptActions{ display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top:12px; }
+#bookingBackdrop select, #bookingBackdrop input{
+  width:100%;
+  padding:.75rem .85rem;
+  border-radius: 14px;
+  border:1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+}
+
+/* --- Booking slots --- */
+.slotGrid{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap:10px;
+  margin-top:4px;
+}
+@media (max-width: 520px){
+  .slotGrid{ grid-template-columns: repeat(2, 1fr); }
+}
+.slotBtn{
+  border:1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform .15s ease, opacity .15s ease;
+}
+.slotBtn:hover{ transform: translateY(-1px); }
+.slotBtn[disabled]{ opacity:.45; cursor:not-allowed; transform:none; }
+.slotBtn.selected{
+  outline: 2px solid rgba(34,197,94,.65);
+  border-color: rgba(34,197,94,.55);
+}
+/* --- Payment box --- */
+.payBox{
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  padding: 12px;
+}
+
+/* --- Payment receipt (demo) --- */
+#bkReceiptLines .line{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  border-bottom:1px dashed var(--border);
+  padding:8px 0;
+}
+#bkReceiptLines .k{ color: var(--muted); }
+#bkReceiptLines .v{ font-weight:900; }
 </style>
 </head>
 <body>
@@ -863,7 +930,8 @@ section{
         <button id="userToggle" class="btn secondary">👤</button>
         <button id="adminToggle" class="btn secondary">⚙️</button>
         <button id="navHistory" class="btn secondary">📂</button>
-    </div>
+    <button id="navAppointments" class="btn secondary">📅</button>
+</div>
 </header>
 
 
@@ -909,6 +977,95 @@ section{
       <button id="emCloseBtn" class="btn secondary">فهمت</button>
     </div>
   </div>
+
+<div id="bookingBackdrop" class="modal-backdrop modal hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="bkTitle">
+    <h3 id="bkTitle">📅 حجز موعد / استشارة عن بُعد</h3>
+    <p id="bkDoctorLine" class="text-muted" style="margin-top:.25rem;"></p>
+
+    <div class="card flat" style="margin-top:12px;">
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+        <label style="display:grid; gap:6px;">
+          <span class="text-muted" style="font-size:.95rem;">نوع الخدمة</span>
+          <select id="bkType">
+            <option value="video">📹 استشارة فيديو</option>
+            <option value="phone">📞 مكالمة</option>
+            <option value="chat">💬 شات (واتساب)</option>
+            <option value="visit">🏥 كشف في العيادة</option>
+          </select>
+        </label>
+
+        <label style="display:grid; gap:6px;">
+          <span class="text-muted" style="font-size:.95rem;">التاريخ</span>
+          <input id="bkDate" type="date" />
+        </label>
+
+        <label style="display:grid; gap:6px;">
+  <span class="text-muted" style="font-size:.95rem;">الوقت المتاح</span>
+  <div id="bkSlots" class="slotGrid"></div>
+  <div class="text-muted" id="bkSlotsHint" style="font-size:.9rem;">اختر وقت من الأوقات المتاحة.</div>
+</label>
+<input id="bkTime" type="time" style="display:none;" />
+
+        <label style="display:grid; gap:6px;">
+          <span class="text-muted" style="font-size:.95rem;">ملاحظات (اختياري)</span>
+          <input id="bkNotes" placeholder="مثال: الأعراض من شهر..." />
+        </label>
+      </div>
+
+      <div class="card flat" id="bkPreviewCard" style="margin-top:12px;">
+        <h4 style="margin:0 0 6px 0;">🔗 رابط الاستشارة</h4>
+        <p class="text-muted" id="bkPreviewText" style="margin:0;">
+          سيتم إنشاء رابط تلقائيًا عند تأكيد الحجز (لفيديو).
+        </p>
+      </div>
+
+      <div class="card flat" style="margin-top:12px;">
+  <h4 style="margin:0 0 8px 0;">💳 الدفع</h4>
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+    <label style="display:grid; gap:6px;">
+      <span class="text-muted" style="font-size:.95rem;">طريقة الدفع</span>
+      <select id="bkPayMethod">
+        <option value="cash">💵 كاش (في العيادة)</option>
+        <option value="card">💳 بطاقة (أونلاين)</option>
+        <option value="vodafone">📱 Vodafone Cash (أونلاين)</option>
+        <option value="fawry">🏪 فوري (أونلاين)</option>
+      </select>
+    </label>
+    <label style="display:grid; gap:6px;">
+      <span class="text-muted" style="font-size:.95rem;">حالة الدفع</span>
+      <div id="bkPayStatusPill" class="pill warn" style="width:max-content;">غير مدفوع</div>
+    </label>
+  </div>
+
+  <div id="bkPayBox" class="payBox" style="margin-top:10px; display:none;">
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+    <p class="text-muted" style="margin:0;">
+      دي <b>نسخة Demo داخل التطبيق</b>. هنحاكي الدفع ونطلع إيصال.
+    </p>
+    <div class="pill warn" id="bkPayStepPill" style="white-space:nowrap;">جاهز للدفع</div>
+  </div>
+
+  <div id="bkPayReceipt" class="card flat" style="margin-top:10px; display:none;">
+    <h4 style="margin:0 0 8px 0;">🧾 إيصال الدفع (Demo)</h4>
+    <div class="text-muted" id="bkReceiptLines" style="display:grid; gap:6px;"></div>
+  </div>
+
+  <div style="display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; margin-top:10px;">
+    <button id="bkPayNowBtn" class="btn secondary" type="button">ادفع الآن (Demo)</button>
+  </div>
+</div>
+</div>
+
+<div class="modal-actions">
+        <button id="bkConfirmBtn" class="btn" type="button">✅ تأكيد الحجز</button>
+        <button id="bkCancelBtn" class="btn secondary" type="button">إلغاء</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 </div>
 
 
@@ -1336,10 +1493,6 @@ section{
   <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top:10px;">
     <a class="btn secondary" id="docExternalSearchBtn" target="_blank" rel="noopener">بحث خارجي (اختياري)</a>
   </div>
-
-  <p class="text-muted" style="margin:10px 0 0 0; font-size:.95rem;">
-    هذا دليل Demo للعرض. في النسخة الكاملة يمكن ربطه بقاعدة بيانات على Railway لإضافة/تحديث الدكاترة والحجز.
-  </p>
 </div>
 </div>
 
@@ -1433,6 +1586,24 @@ section{
       <h3 style="margin-top:0;">الاتجاه</h3>
       <canvas id="moodChart" height="120"></canvas>
       <div id="moodHints" class="text-muted" style="margin-top:.5rem;"></div>
+    </div>
+  </div>
+</section>
+
+<section id="appointments" dir="rtl">
+  <div class="container">
+    <div class="card">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+        <h2 id="apptTitle" style="margin:0;">📅 مواعيدي</h2>
+        <button id="apptBackBtn" class="btn secondary" type="button">⬅️ رجوع</button>
+      </div>
+      <p id="apptSub" class="text-muted" style="margin-top:.35rem;">
+        هنا هتلاقي كل الحجوزات والاستشارات عن بعد اللي عملتها من خلال Moa'een.
+      </p>
+      <div id="apptList" style="display:grid; gap:12px; margin-top:14px;"></div>
+      <div class="text-muted" id="apptEmpty" style="text-align:center; margin-top:14px; display:none;">
+        لا يوجد مواعيد حاليًا.
+      </div>
     </div>
   </div>
 </section>
@@ -1563,8 +1734,18 @@ function uid() {
   return (crypto?.randomUUID?.() || ('u_' + Math.random().toString(16).slice(2) + Date.now().toString(16)));
 }
 
+
+function escapeHtml(str){
+  return String(str || '')
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'","&#039;");
+}
+
 function safeJsonParse(str, fallback) {
-  try { return JSON.parse(str); } catch { return fallback; }
+  try { return JSON.parse(str); } catch (e) { return fallback; }
 }
 
 
@@ -2541,7 +2722,9 @@ class MoeenApp {
     // Developer Info Button Listener (Now switches to the page)
     this.$('devsToggle').onclick = () => this.showSection('developers_page'); 
     
-    this.$('navHistory').onclick = () => this.renderHistory(); 
+    this.$('navHistory').onclick = () => this.renderHistory();
+    if (this.$('navAppointments')) this.$('navAppointments').onclick = () => this.openAppointments();
+    if (this.$('apptBackBtn')) this.$('apptBackBtn').onclick = () => this.showSection('welcome'); 
     
     // Quick check + Mood + Ethics
     if (this.$('quickOpenBtn')) this.$('quickOpenBtn').onclick = () => this.showSection('quick');
@@ -3926,12 +4109,419 @@ renderDoctorDirectory(report){
       </div>
 
       <div class="docActions">
+        <button class="btn bookBtn" type="button">${isAr ? "📅 احجز / عن بُعد" : "📅 Book / Remote"}</button>
         <a class="btn primary" target="_blank" rel="noopener" href="${waLink}">${isAr ? 'واتساب' : 'WhatsApp'}</a>
         <a class="btn secondary" href="${emailLink}">${isAr ? 'إيميل' : 'Email'}</a>
       </div>
     `;
+
+// Direct bind booking button (reliable)
+const bookBtn = card.querySelector('.bookBtn');
+if(bookBtn){
+  bookBtn.onclick = (e)=>{
+    e.preventDefault();
+    e.stopPropagation();
+    this.openBookingModal(d);
+  };
+}
+
+
     list.appendChild(card);
   });
+}
+// =======================
+// 📅 Appointments & Tele-consultation
+// =======================
+getAppointmentsKey(){
+  const uid = this.currentUserId || 'default';
+  return `moa_een_appointments_${uid}`;
+}
+getAppointments(){
+  return safeJsonParse(storage.getItem(this.getAppointmentsKey()), []);
+}
+saveAppointments(list){
+  storage.setItem(this.getAppointmentsKey(), JSON.stringify(list || []));
+}
+openAppointments(){
+  this.renderAppointments();
+  this.showSection('appointments');
+}
+renderAppointments(){
+  const listEl = this.$('apptList');
+  const emptyEl = this.$('apptEmpty');
+  if(!listEl || !emptyEl) return;
+
+  const isAr = this.lang === 'ar';
+  const appts = this.getAppointments().sort((a,b)=> (b.ts||0) - (a.ts||0));
+
+  listEl.innerHTML = '';
+  emptyEl.style.display = appts.length ? 'none' : 'block';
+  if(!appts.length) return;
+
+  const typeMap = {
+    video: isAr ? '📹 استشارة فيديو' : '📹 Video consult',
+    phone: isAr ? '📞 مكالمة' : '📞 Phone call',
+    chat:  isAr ? '💬 شات (واتساب)' : '💬 Chat (WhatsApp)',
+    visit: isAr ? '🏥 كشف في العيادة' : '🏥 In-clinic visit'
+  };
+
+  appts.forEach(a=>{
+    const card = document.createElement('div');
+    card.className = 'apptCard';
+
+    const dt = new Date(a.datetime).toLocaleString(isAr ? 'ar-EG' : 'en-US');
+
+    card.innerHTML = `
+      <div class="top">
+        <div>
+          <div class="title">${escapeHtml(a.doctorName || (isAr?'مختص':'Specialist'))}</div>
+          <div class="meta">${typeMap[a.type] || a.type} • ${dt}</div>
+          <div class="meta">${a.city ? ('📍 ' + escapeHtml(a.city)) : ''}${a.fee ? (' • ' + a.fee + (isAr?' ج.م':' EGP')) : ''}</div>
+        </div>
+        <div class="pill stable" style="white-space:nowrap;">${a.status || (isAr?'مؤكد':'Confirmed')}</div>
+      </div>
+      ${a.notes ? `<div class="meta" style="margin-top:8px;">📝 ${escapeHtml(a.notes)}</div>` : ``}
+      <div class="apptActions">
+        ${a.meetingUrl ? `<a class="btn" target="_blank" rel="noopener" href="${a.meetingUrl}">${isAr?'فتح الرابط':'Open link'}</a>` : ``}
+        ${a.waUrl ? `<a class="btn secondary" target="_blank" rel="noopener" href="${a.waUrl}">${isAr?'واتساب':'WhatsApp'}</a>` : ``}        ${(a.paymentStatus!=='paid' && (a.paymentMethod||'cash')!=='cash') ? `<button class="btn" data-pay="${a.id}">${isAr?'ادفع الآن':'Pay now'}</button>` : ``}
+        <button class="btn secondary" data-cancel="${a.id}">${isAr?'إلغاء':'Cancel'}</button>
+      </div>
+    `;
+    listEl.appendChild(card);
+  });
+
+  listEl.querySelectorAll('[data-pay]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.getAttribute('data-pay');
+      const all = this.getAppointments();
+      const item = all.find(x=>x.id===id);
+      if(!item) return;
+      item.paymentStatus = 'paid';
+      item.paymentTxn = item.paymentTxn || ('TXN-' + Math.random().toString(36).slice(2,10).toUpperCase());
+      this.saveAppointments(all);
+      this.renderAppointments();
+      alert(this.lang==='ar' ? 'تم الدفع (Demo) ✅' : 'Payment confirmed (Demo) ✅');
+    };
+  });
+
+  listEl.querySelectorAll('[data-cancel]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.getAttribute('data-cancel');
+      const next = this.getAppointments().filter(x => x.id !== id);
+      this.saveAppointments(next);
+      this.renderAppointments();
+    };
+  });
+}
+generateMeetingLink(){
+  const rnd = Math.random().toString(36).slice(2,10);
+  return `https://meet.jit.si/Moa-een-${rnd}`;
+}
+openBookingModal(doctor){
+  const bd = this.$('bookingBackdrop');
+  if(!bd) return;
+  bd.classList.remove('hidden');
+
+  this._bookingDoctor = doctor || null;
+
+  const isAr = this.lang === 'ar';
+  const line = this.$('bkDoctorLine');
+  const typeEl = this.$('bkType');
+  const dateEl = this.$('bkDate');
+  const timeEl = this.$('bkTime');
+  const notesEl = this.$('bkNotes');
+  const prevTxt = this.$('bkPreviewText');
+
+  const docName = doctor ? (isAr ? doctor.nameAr : doctor.nameEn) : (isAr?'مختص':'Specialist');
+  const docCity = doctor ? (isAr ? doctor.cityAr : doctor.cityEn) : '';
+  if(line) line.textContent = isAr ? `مع: ${docName}${docCity ? ' • ' + docCity : ''}` : `With: ${docName}${docCity ? ' • ' + docCity : ''}`;
+
+  const now = new Date();
+  const tomorrow = new Date(now.getTime() + 24*3600*1000);
+  const yyyy = tomorrow.getFullYear();
+  const mm = String(tomorrow.getMonth()+1).padStart(2,'0');
+  const dd = String(tomorrow.getDate()).padStart(2,'0');
+  if(dateEl && !dateEl.value) dateEl.value = `${yyyy}-${mm}-${dd}`;
+  if(timeEl && !timeEl.value) timeEl.value = `18:00`;
+  if(notesEl) notesEl.value = '';
+
+  const updatePreview = ()=>{
+    const t = typeEl?.value || 'video';
+    if(!prevTxt) return;
+    if(t === 'video'){
+      prevTxt.textContent = isAr ? 'سيتم إنشاء رابط Jitsi تلقائيًا عند تأكيد الحجز.' : 'A Jitsi link will be generated on confirm.';
+    } else if (t === 'chat'){
+      prevTxt.textContent = isAr ? 'هيتم فتح واتساب برسالة إحالة جاهزة.' : 'WhatsApp will open with a referral message.';
+    } else {
+      prevTxt.textContent = isAr ? 'حجز موعد فقط (بدون رابط).' : 'Booking only (no link).';
+    }
+  };
+  typeEl && (typeEl.onchange = updatePreview);
+  updatePreview();
+
+  
+    // Slots + payment
+    const refreshSlots = ()=> this.renderBookingSlots();
+    dateEl && (dateEl.onchange = refreshSlots);
+    typeEl && (typeEl.onchange = ()=>{ updatePreview(); refreshSlots(); });
+    refreshSlots();
+
+    const payMethod = this.$('bkPayMethod');
+    payMethod && (payMethod.onchange = ()=> this.updatePaymentUI());
+    this.updatePaymentUI();
+const cancelBtn = this.$('bkCancelBtn');
+  const confirmBtn = this.$('bkConfirmBtn');
+  cancelBtn && (cancelBtn.onclick = ()=> bd.classList.add('hidden'));
+  confirmBtn && (confirmBtn.onclick = ()=> this.confirmBooking());
+}
+confirmBooking(){
+  const bd = this.$('bookingBackdrop');
+  const typeEl = this.$('bkType');
+  const dateEl = this.$('bkDate');
+  const timeEl = this.$('bkTime');
+  const notesEl = this.$('bkNotes');
+
+  const type = typeEl?.value || 'video';
+  const date = dateEl?.value;
+  const time = timeEl?.value; // set by slot selection
+  if(!date || !time){
+    alert(this.lang === 'ar' ? 'من فضلك اختر التاريخ والوقت.' : 'Please select date and time.');
+    return;
+  }
+  const datetime = new Date(`${date}T${time}:00`);
+  const doctor = this._bookingDoctor;
+
+  const isAr = this.lang === 'ar';
+  const docName = doctor ? (isAr ? doctor.nameAr : doctor.nameEn) : (isAr?'مختص':'Specialist');
+  const city = doctor ? (isAr ? doctor.cityAr : doctor.cityEn) : '';
+  const fee = doctor ? doctor.fee : null;
+
+  const referral = this.$('docReferralText')?.value || (this.currentReport ? this.buildReferralText(this.currentReport) : '');
+  const appt = {
+    id: 'a_' + Math.random().toString(36).slice(2,10),
+    ts: Date.now(),
+    type,
+    datetime: datetime.toISOString(),
+    doctorName: docName,
+    city,
+    fee,
+    notes: (notesEl?.value || '').trim(),
+    status: (this.lang==='ar') ? 'مؤكد' : 'Confirmed'
+  };
+
+  if(type === 'video'){
+    appt.meetingUrl = this.generateMeetingLink();
+  } else if (type === 'chat'){
+    const msg = referral || (isAr ? 'مرحبًا، أحتاج استشارة.' : 'Hello, I need a consultation.');
+    const phone = doctor?.wa ? doctor.wa.replace(/\D/g,'') : '';
+    appt.waUrl = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  }
+
+  const all = this.getAppointments();
+  all.unshift(appt);
+  this.saveAppointments(all);
+
+  if(bd) bd.classList.add('hidden');
+
+  this.openAppointments();
+
+  if(appt.meetingUrl){
+    window.open(appt.meetingUrl, '_blank', 'noopener');
+  } else if (appt.waUrl){
+    window.open(appt.waUrl, '_blank', 'noopener');
+  }
+}
+
+// =======================
+// 🕒 Availability & Payment (Demo)
+// =======================
+_slotSeed(str){
+  // simple deterministic hash
+  let h = 2166136261;
+  for(let i=0;i<str.length;i++){
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+generateSlotsForDate(doctor, dateStr, type){
+  // Demo: 12:00 → 20:00 every 30 min (video/phone/chat), visits 10:00 → 17:00
+  const isVisit = type === 'visit';
+  const start = isVisit ? 10 : 12;
+  const end = isVisit ? 17 : 20;
+  const slots = [];
+  for(let h=start; h<=end; h++){
+    for(let m of [0,30]){
+      if(h===end && m>0) continue;
+      const hh = String(h).padStart(2,'0');
+      const mm = String(m).padStart(2,'0');
+      slots.push(`${hh}:${mm}`);
+    }
+  }
+
+  // Deterministic random blocking based on doctor+date+type
+  const key = `${doctor?.nameEn||'doc'}|${doctor?.cityEn||''}|${dateStr}|${type}`;
+  let seed = this._slotSeed(key);
+  const rand = ()=> (seed = (seed*1664525 + 1013904223) >>> 0) / 4294967296;
+
+  // Block ~25% of slots
+  const blocked = new Set();
+  slots.forEach(t=>{
+    if(rand() < 0.25) blocked.add(t);
+  });
+
+  // Also block already-booked times for this doctor on this date
+  const appts = this.getAppointments();
+  appts.forEach(a=>{
+    if(!doctor) return;
+    const sameDoc = (a.doctorName || '') === ((this.lang==='ar') ? doctor.nameAr : doctor.nameEn);
+    if(!sameDoc) return;
+    const d = new Date(a.datetime);
+    const ds = d.toISOString().slice(0,10);
+    if(ds === dateStr){
+      const tt = d.toISOString().slice(11,16);
+      blocked.add(tt);
+    }
+  });
+
+  return {slots, blocked};
+}
+
+renderBookingSlots(){
+  const slotWrap = this.$('bkSlots');
+  const hint = this.$('bkSlotsHint');
+  const dateEl = this.$('bkDate');
+  const typeEl = this.$('bkType');
+  const timeEl = this.$('bkTime');
+  if(!slotWrap || !dateEl || !typeEl) return;
+
+  const dateStr = dateEl.value;
+  const type = typeEl.value || 'video';
+  const doctor = this._bookingDoctor;
+
+  slotWrap.innerHTML = '';
+  if(!dateStr){
+    if(hint) hint.textContent = (this.lang==='ar') ? 'اختار التاريخ الأول.' : 'Choose date first.';
+    return;
+  }
+
+  const {slots, blocked} = this.generateSlotsForDate(doctor, dateStr, type);
+  if(hint) hint.textContent = (this.lang==='ar') ? 'اختار وقت من الأوقات المتاحة.' : 'Pick an available time.';
+
+  slots.forEach(t=>{
+    const btn = document.createElement('button');
+    btn.className = 'slotBtn';
+    btn.type = 'button';
+    btn.textContent = t;
+    btn.disabled = blocked.has(t);
+    btn.onclick = ()=>{
+      if(btn.disabled) return;
+      // clear
+      slotWrap.querySelectorAll('.slotBtn').forEach(b=> b.classList.remove('selected'));
+      btn.classList.add('selected');
+      if(timeEl) timeEl.value = t;
+    };
+    slotWrap.appendChild(btn);
+  });
+
+  // Clear previous selection
+  if(timeEl) timeEl.value = '';
+}
+
+updatePaymentUI(){
+  const isAr = this.lang === 'ar';
+  const methodSel = this.$('bkPayMethod');
+  const box = this.$('bkPayBox');
+  const pill = this.$('bkPayStatusPill');
+  const stepPill = this.$('bkPayStepPill');
+  const receipt = this.$('bkPayReceipt');
+  const lines = this.$('bkReceiptLines');
+
+  const method = methodSel ? (methodSel.value || 'cash') : 'cash';
+  const online = (method !== 'cash');
+
+  if(box) box.style.display = online ? 'block' : 'none';
+
+  // Reset demo state when method changes
+  this._bkPayMethod = method;
+  this._bkPaid = !online;
+  this._bkTxn = null;
+
+  if(pill){
+    pill.classList.remove('stable','bad','warn');
+    pill.classList.add(online ? 'warn' : 'stable');
+    pill.textContent = online ? (isAr ? 'غير مدفوع' : 'Unpaid') : (isAr ? 'كاش' : 'Cash');
+  }
+  if(stepPill){
+    stepPill.classList.remove('stable','bad','warn');
+    stepPill.classList.add('warn');
+    stepPill.textContent = isAr ? 'جاهز للدفع' : 'Ready';
+  }
+  if(receipt) receipt.style.display = 'none';
+  if(lines) lines.innerHTML = '';
+
+  const payNow = this.$('bkPayNowBtn');
+  if(payNow){
+    payNow.disabled = false;
+    payNow.onclick = ()=>{
+      payNow.disabled = true;
+
+      if(stepPill){
+        stepPill.classList.remove('stable','bad');
+        stepPill.classList.add('warn');
+        stepPill.textContent = isAr ? 'جاري المعالجة...' : 'Processing...';
+      }
+
+      setTimeout(()=>{
+        this._bkPaid = true;
+        this._bkTxn = 'TXN-' + Math.random().toString(36).slice(2,10).toUpperCase();
+
+        if(pill){
+          pill.classList.remove('warn');
+          pill.classList.add('stable');
+          pill.textContent = isAr ? 'مدفوع ✅' : 'Paid ✅';
+        }
+        if(stepPill){
+          stepPill.classList.remove('warn');
+          stepPill.classList.add('stable');
+          stepPill.textContent = isAr ? 'تم الدفع' : 'Paid';
+        }
+        if(receipt) receipt.style.display = 'block';
+
+        const now = new Date();
+        const dt = now.toLocaleString(isAr ? 'ar-EG' : 'en-US');
+
+        const fee = this._bookingDoctor?.fee || '';
+        const doctorName = this._bookingDoctor ? (isAr ? this._bookingDoctor.nameAr : this._bookingDoctor.nameEn) : (isAr?'مختص':'Specialist');
+
+        const methodLabel = (m)=>{
+          if(m==='card') return isAr ? 'بطاقة' : 'Card';
+          if(m==='vodafone') return isAr ? 'Vodafone Cash' : 'Vodafone Cash';
+          if(m==='fawry') return isAr ? 'فوري' : 'Fawry';
+          return isAr ? 'كاش' : 'Cash';
+        };
+
+        if(lines){
+          lines.innerHTML = '';
+          const add = (k,v)=>{
+            const div = document.createElement('div');
+            div.className = 'line';
+            div.innerHTML = `<span class="k">${k}</span><span class="v">${v}</span>`;
+            lines.appendChild(div);
+          };
+          add(isAr?'رقم العملية':'Transaction', this._bkTxn);
+          add(isAr?'الوقت':'Time', dt);
+          add(isAr?'المختص':'Specialist', doctorName);
+          if(fee) add(isAr?'المبلغ':'Amount', `${fee} ${isAr?'ج.م':'EGP'}`);
+          add(isAr?'الطريقة':'Method', methodLabel(method));
+          add(isAr?'الحالة':'Status', isAr?'مدفوع ✅':'Paid ✅');
+        }
+
+        payNow.disabled = false;
+      }, 900);
+    };
+  }
 }
 
 // --- END NEW ---
