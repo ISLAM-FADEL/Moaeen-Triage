@@ -8,7 +8,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="معين">
-<link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
@@ -64,15 +63,9 @@
   0%   { transform: translateY(0) scale(1); }
   100% { transform: translateY(-2px) scale(1.02); }
 }
-50% { font-size: 6.5rem; }
-  100% { font-size: 5.5rem; }
-}
-
 @keyframes glow-pulse {
   0%, 100% { text-shadow: 0 0 10px rgba(124,108,255,0.28), 0 0 22px rgba(45,212,191,0.18); }
   50%      { text-shadow: 0 0 16px rgba(124,108,255,0.34), 0 0 30px rgba(251,113,133,0.16); }
-}
-50% { text-shadow: 0 0 20px var(--accent-main), 0 0 40px var(--accent), 0 0 70px var(--accent-main), 0 0 90px var(--accent); }
 }
 
 /* Base Styles */
@@ -140,10 +133,10 @@ p { color: var(--muted); margin-bottom: 1rem; }
   min-height: 30vh; 
 }
 
-will-change: transform, text-shadow;
-  animation: pulse-moeen 2.4s ease-in-out infinite alternate, glow-pulse 3.4s ease-in-out infinite alternate; 
+#brandName{
+  will-change: transform, text-shadow;
+  animation: pulse-moeen 2.4s ease-in-out infinite alternate, glow-pulse 3.4s ease-in-out infinite alternate;
 }
-
 /* Components */
 .card {
   background: var(--card-bg);
@@ -780,6 +773,84 @@ section{
 @keyframes micPulse { 0%{ transform:scale(1); } 100%{ transform:scale(1.03); } }
 .micPulse{ animation: micPulse .8s ease-in-out infinite alternate; }
 
+
+/* --- Result reveal + emotion-aware theme --- */
+.reveal { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
+.reveal.show { opacity: 1; transform: translateY(0); }
+:root[data-state="stable"] { --accent-main: #22c55e; }
+:root[data-state="warn"] { --accent-main: #f59e0b; }
+:root[data-state="bad"] { --accent-main: #ef4444; }
+
+/* --- Guided breathing widget --- */
+.breath-wrap{ margin-top:12px; display:grid; gap:14px; }
+.breath-circle{
+  width:min(280px, 70vw);
+  aspect-ratio: 1 / 1;
+  border-radius:999px;
+  margin: 8px auto 0;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.18), rgba(255,255,255,0) 55%),
+              linear-gradient(135deg, rgba(34,197,94,.18), rgba(59,130,246,.10));
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 60px rgba(0,0,0,.08);
+  transform: scale(0.92);
+  transition: transform 1s ease;
+}
+.breath-circle.inhale{ transform: scale(1.02); }
+.breath-circle.hold{ transform: scale(1.02); }
+.breath-circle.exhale{ transform: scale(0.88); }
+.breath-label{ font-weight:800; font-size:1.1rem; }
+.breath-timer{ margin-top:6px; font-weight:700; opacity:.9; }
+.breath-controls{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; }
+.guided-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+@media (max-width: 520px){ .guided-grid{ grid-template-columns: 1fr; } }
+
+/* --- Modal actions layout --- */
+.modal-actions{ display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top:14px; }
+
+
+
+/* --- Doctor connect card --- */
+#doctorConnectCard input, #doctorConnectCard select{
+  width: 100%;
+  padding: .75rem .85rem;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+}
+#doctorConnectCard textarea{
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  padding: .75rem .85rem;
+  line-height: 1.5;
+}
+
+
+/* --- Moa'een Doctor Directory cards --- */
+.docCard{
+  border:1px solid var(--border);
+  background: var(--card-bg);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.06);
+}
+.docCard .top{
+  display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap;
+}
+.docCard .name{ font-weight:900; }
+.docCard .meta{ color: var(--muted); font-size:.95rem; margin-top:4px; }
+.docTags{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.docTags .tag{
+  border:1px solid var(--card-border);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size:.9rem;
+  background: rgba(255,255,255,0.04);
+}
+.docActions{ display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top:12px; }
 </style>
 </head>
 <body>
@@ -812,6 +883,36 @@ section{
   </div>
 
 </div>
+
+
+<div id="emergencyBackdrop" class="modal-backdrop modal hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="emTitle">
+    <h3 id="emTitle">🚨 تنبيه مهم</h3>
+    <p id="emBody" class="text-muted" style="margin-top:.25rem;">
+      لاحظنا مؤشرات محتملة لخطر إيذاء النفس. <b>معين مش خدمة طوارئ</b>. لو في خطر فوري، اتواصل فورًا مع شخص قريب أو جهة طوارئ.
+    </p>
+
+    <div class="card flat" style="margin-top:12px;">
+      <h4 style="margin:0 0 8px 0;">📞 جهات مساعدة (مثال)</h4>
+      <ul class="helpline-list" style="margin:0;">
+        <li><b>الطوارئ:</b> 122</li>
+        <li><b>الإسعاف:</b> 123</li>
+        <li><b>شخص موثوق:</b> صديق/قريب الآن</li>
+      </ul>
+      <p class="text-muted" style="margin:10px 0 0 0; font-size:.95rem;">
+        لو تقدر، ابعد أي أدوات ممكن تضرّك، وخليك مع حد قريب لحد ما تهدى.
+      </p>
+    </div>
+
+    <div class="modal-actions">
+      <button id="emBreatheBtn" class="btn">ابدأ تمرين تنفّس</button>
+      <button id="emCloseBtn" class="btn secondary">فهمت</button>
+    </div>
+  </div>
+</div>
+
+
+
 
 <!-- User Switcher Modal -->
 <div id="userBackdrop" class="modal-backdrop modal hidden">
@@ -990,7 +1091,7 @@ section{
 
             <div class="input-group">
                 <label id="askLabel" for="askInput">وصف حالتك</label>
-                <textarea id="askInput" rows="6" style="direction: rtl;" placeholder="مثال: بقالي أسبوعين مش بنام كويس وقلقان طول الوقت..."></textarea></textarea>
+                <textarea id="askInput" rows="6" style="direction: rtl;" placeholder="مثال: بقالي أسبوعين مش بنام كويس وقلقان طول الوقت..."></textarea>
 
             <!-- 🎙️ Voice: record & live dictation (browser-native) -->
             <div class="card" id="voiceCard" style="margin-top:1rem;">
@@ -1131,6 +1232,14 @@ section{
 
             <div id="overallScorePill" class="pill"></div>
 
+            
+<div class="card" id="explainCard" style="display:none;">
+  <h3 id="explainTitle" style="margin-top:0;">🔍 لماذا ظهرت هذه النتيجة؟</h3>
+  <p id="explainSummary" class="text-muted" style="margin-top:.25rem; margin-bottom:.75rem;"></p>
+  <ul id="explainList" class="advice-list" style="margin-bottom:0;"></ul>
+</div>
+
+
             <div class="card" id="disclaimerCard">
                 <h3 id="disclaimerTitle" style="margin-top: 0;"></h3>
                 <p id="disclaimerText" class="text-muted" style="margin-bottom: 0;"></p>
@@ -1183,7 +1292,58 @@ section{
                 </div>
             </div>
             
-            <div id="breathingWidget" style="display: none;"></div> 
+            <div class="card" id="doctorConnectCard" style="display:none; margin-top: 1rem;">
+  <h3 id="docConnectTitle" style="margin-top:0;">🩺 تواصل مع مختص</h3>
+  <p id="docConnectSub" class="text-muted" style="margin-top:.25rem;">
+    معين لا يُغني عن الطبيب. لو حابب، جهّزنا لك رسالة مختصرة تقدر تبعتها لدكتور عبر واتساب أو إيميل.
+  </p>
+
+  <div class="card flat" style="margin-top:12px;">
+    <h4 style="margin:0 0 8px 0;">📄 رسالة إحالة مختصرة</h4>
+    <textarea id="docReferralText" style="width:100%; min-height:120px; resize:vertical;" readonly></textarea>
+    <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top:10px;">
+      <button class="btn secondary" id="docCopyBtn" type="button">📋 نسخ الرسالة</button>
+      <a class="btn" id="docWhatsappBtn" target="_blank" rel="noopener">واتساب</a>
+      <a class="btn secondary" id="docEmailBtn">إيميل</a>
+    </div>
+  </div>
+
+  <div class="card flat" style="margin-top:12px;">
+  <h4 style="margin:0 0 8px 0;">🔎 دليل الأطباء داخل Moa'een (Demo)</h4>
+
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+    <input id="docCityInput" placeholder="المحافظة/المدينة" />
+    <select id="docSpecSelect">
+      <option value="psychiatrist">طبيب نفسي</option>
+      <option value="psychologist">أخصائي نفسي (جلسات/CBT)</option>
+      <option value="counselor">إرشاد/استشارات</option>
+    </select>
+  </div>
+
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+    <select id="docFeeSelect">
+      <option value="any">أي سعر</option>
+      <option value="0-200">0 - 200</option>
+      <option value="200-400">200 - 400</option>
+      <option value="400-800">400 - 800</option>
+      <option value="800+">800+</option>
+    </select>
+    <input id="docSearchInput" placeholder="بحث بالاسم/العيادة" />
+  </div>
+
+  <div id="docDirectoryList" style="margin-top:12px; display:grid; gap:12px;"></div>
+
+  <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top:10px;">
+    <a class="btn secondary" id="docExternalSearchBtn" target="_blank" rel="noopener">بحث خارجي (اختياري)</a>
+  </div>
+
+  <p class="text-muted" style="margin:10px 0 0 0; font-size:.95rem;">
+    هذا دليل Demo للعرض. في النسخة الكاملة يمكن ربطه بقاعدة بيانات على Railway لإضافة/تحديث الدكاترة والحجز.
+  </p>
+</div>
+</div>
+
+<div id="breathingWidget" 
 
         </div>
     </section>
@@ -1880,7 +2040,7 @@ class MoeenApp {
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try{
-      const r = await fetch('https://moaeen-triage-backend-production.up.railway.app/api/chat', {
+      const r = await fetch('/api/triage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, lang: this.lang }),
@@ -2966,7 +3126,7 @@ toggleLang() {
     this.$('themeToggle').textContent = this.theme === 'dark' ? '☀' : '☾';
     // Re-render charts to use new theme colors
     if (this.currentReport) this.renderChart(this.currentReport.results);
-    if (document.querySelector('#history.active')) this.renderHistoryChart(JSON.parse(storage.getItem(this.getHistoryKey()) || '[]').reverse());
+    if (document.querySelector('#history.active')) this.renderHistoryChart(safeJsonParse(storage.getItem(this.getHistoryKey()), []).reverse());
   }
 
   showSection(id) {
@@ -3192,7 +3352,7 @@ toggleLang() {
   }
 
   saveResult(report) {
-    let hist = JSON.parse(storage.getItem(this.getHistoryKey()) || '[]');
+    let hist = safeJsonParse(storage.getItem(this.getHistoryKey()), []);
     hist.push(report);
     storage.setItem(this.getHistoryKey(), JSON.stringify(hist));
   }
@@ -3249,9 +3409,532 @@ toggleLang() {
     // Supportive Content (Show only if score is Moderate or Severe >= 30)
     this.$('supportiveContent').style.display = report.finalScore >= this.model.config.cutoffs.moderate ? 'block' : 'none';
     
-    // Bio Feedback Widget (Hidden for this version)
-    this.$('breathingWidget').style.display = 'none';
+    // Explainability (XAI)
+    this.renderExplainability(report);
+
+    // Emotion-aware UI accent (stable/warn/bad)
+    this.applyEmotionTheme(report.finalScore);
+
+    // Guided breathing widget (shown for moderate+ OR if user wants it)
+    this.updateBreathingWidget(report);
+
+    
+    this.updateDoctorConnect(report);
+// Safety Escalation (critical)
+    this.checkEmergencyFromReport(report);
+
+    // Reveal animation for result cards
+    this.applyResultReveal();
   }
+
+
+  // --- NEW: Emotion-aware theme + reveal animations + breathing + XAI + Safety ---
+  applyEmotionTheme(score){
+    const sev = getSeverity(score, this.model); // stable | warn | bad
+    document.documentElement.setAttribute('data-state', sev);
+  }
+
+  applyResultReveal(){
+    const root = this.$('reportContent') || this.$('result');
+    if(!root) return;
+    // mark key blocks
+    const ids = [
+      'trendBox','overallScorePill','explainCard','disclaimerCard','recommendationsCard',
+      'chartCard','heatmapCard','supportCard','breathingWidget','doctorConnectCard'
+    ];
+    ids.forEach(id=>{
+      const el = this.$(id);
+      if(!el) return;
+      el.classList.add('reveal');
+      el.classList.remove('show');
+    });
+    // staged reveal
+    let delay = 60;
+    ids.forEach(id=>{
+      const el = this.$(id);
+      if(!el) return;
+      setTimeout(()=> el.classList.add('show'), delay);
+      delay += 90;
+    });
+  }
+
+  renderExplainability(report){
+    const card = this.$('explainCard');
+    if(!card) return;
+
+    // Build simple, transparent explanation from answered items
+    const byDomain = { depression:[], anxiety:[], ocd:[], trauma:[] };
+    (report.qList || []).forEach((q, i)=>{
+      const a = (report.answers || [])[i];
+      if(typeof a !== 'number') return;
+      if(a >= 2) byDomain[q.d].push({q, a});
+    });
+
+    // Top 2 strongest domains (by percentage)
+    const sorted = Object.keys(report.results).sort((a,b)=> (report.results[b]||0) - (report.results[a]||0));
+    const top = sorted.filter(d => (report.results[d]||0) > 0).slice(0,2);
+
+    const isAr = this.lang === 'ar';
+    const title = this.$('explainTitle');
+    const sum = this.$('explainSummary');
+    const list = this.$('explainList');
+
+    if(title) title.textContent = isAr ? '🔍 لماذا ظهرت هذه النتيجة؟' : '🔍 Why did this result appear?';
+
+    const hasSignals = top.length && top.some(d => byDomain[d].length);
+    if(!hasSignals){
+      card.style.display = 'none';
+      return;
+    }
+
+    card.style.display = 'block';
+    if(sum){
+      const topName = top.map(d => this.model.config.domains[d][this.lang]).join(isAr ? ' + ' : ' + ');
+      sum.textContent = isAr
+        ? `النتيجة اتأثرت أكتر بـ: ${topName}. (بنفس أسلوب الأسئلة، مش تشخيص طبي)`
+        : `Most influenced by: ${topName}. (Question-based signals, not a medical diagnosis)`;
+    }
+
+    if(list){
+      list.innerHTML = '';
+      top.forEach(d=>{
+        const items = byDomain[d].slice(0,3);
+        if(!items.length) return;
+        const li = document.createElement('li');
+        li.innerHTML = `<b>${this.model.config.domains[d][this.lang]}:</b> ` + items.map(x=>{
+          const qText = (x.q[this.lang] || '').trim();
+          return `“${qText}”`;
+        }).join(isAr ? '، ' : ', ');
+        list.appendChild(li);
+      });
+      const li2 = document.createElement('li');
+      li2.textContent = isAr
+        ? 'ملاحظة: الأسئلة اللي اتجاوبت بدرجة عالية ليها تأثير أكبر على التصنيف.'
+        : 'Note: Higher-intensity answers weigh more in the classification.';
+      list.appendChild(li2);
+    }
+  }
+
+  updateBreathingWidget(report){
+    const wrap = this.$('breathingWidget');
+    if(!wrap) return;
+
+    const isAr = this.lang === 'ar';
+    const show = report.finalScore >= this.model.config.cutoffs.moderate; // moderate+
+    wrap.style.display = show ? 'block' : 'none';
+    if(!show) return;
+
+    // Localize texts
+    const title = this.$('breathTitle');
+    const sub = this.$('breathSub');
+    const start = this.$('breathStartBtn');
+    const stop = this.$('breathStopBtn');
+    const skip = this.$('breathSkipBtn');
+    const mood = this.$('guidedMoodBtn');
+    const hist = this.$('guidedHistoryBtn');
+    const neu = this.$('guidedNewBtn');
+
+    if(title) title.textContent = isAr ? '🫁 تمرين تنفّس سريع' : '🫁 Quick breathing exercise';
+    if(sub) sub.textContent = isAr
+      ? 'جرّب تمرين 4-4-6 (شهيق 4 ثواني، حبس 4، زفير 6). هيهدّي الجسم بسرعة.'
+      : 'Try 4-4-6 (inhale 4s, hold 4s, exhale 6s). It can calm your body quickly.';
+    if(start) start.textContent = isAr ? 'ابدأ' : 'Start';
+    if(stop) stop.textContent = isAr ? 'إيقاف' : 'Stop';
+    if(skip) skip.textContent = isAr ? 'تخطي' : 'Skip';
+    if(mood) mood.textContent = isAr ? 'سجّل مودك النهارده' : 'Log today’s mood';
+    if(hist) hist.textContent = isAr ? 'شوف تاريخك' : 'View history';
+    if(neu) neu.textContent = isAr ? 'تقييم جديد' : 'New assessment';
+
+    // Wire actions (idempotent)
+    if(!this._breathBound){
+      this._breathBound = true;
+      const startBtn = this.$('breathStartBtn');
+      const stopBtn = this.$('breathStopBtn');
+      const skipBtn = this.$('breathSkipBtn');
+
+      startBtn && (startBtn.onclick = ()=> this.startBreathing());
+      stopBtn && (stopBtn.onclick = ()=> this.stopBreathing(true));
+      skipBtn && (skipBtn.onclick = ()=> {
+        this.stopBreathing(false);
+        this.$('breathingWidget').style.display = 'none';
+      });
+
+      const moodBtn = this.$('guidedMoodBtn');
+      const histBtn = this.$('guidedHistoryBtn');
+      const newBtn = this.$('guidedNewBtn');
+
+      moodBtn && (moodBtn.onclick = ()=> { this.showSection('mood'); this.renderMood(); });
+      histBtn && (histBtn.onclick = ()=> this.renderHistory());
+      newBtn && (newBtn.onclick = ()=> this.newDiagnosis());
+    }
+
+    // Reset UI
+    this.stopBreathing(false);
+  }
+
+  startBreathing(){
+    if(this._breathTimer) return; // already running
+    const circle = this.$('breathCircle');
+    const phaseEl = this.$('breathPhase');
+    const timerEl = this.$('breathTimer');
+    const startBtn = this.$('breathStartBtn');
+    const stopBtn = this.$('breathStopBtn');
+
+    if(startBtn) startBtn.style.display = 'none';
+    if(stopBtn) stopBtn.style.display = 'inline-block';
+
+    const totalSec = 120; // 2 minutes
+    let left = totalSec;
+
+    const fmt = (s)=> `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+    if(timerEl) timerEl.textContent = fmt(left);
+
+    // 4-4-6 cycle = 14s
+    const phases = [
+      {nameAr:'شهيق', nameEn:'Inhale', cls:'inhale', sec:4},
+      {nameAr:'حبس', nameEn:'Hold', cls:'hold', sec:4},
+      {nameAr:'زفير', nameEn:'Exhale', cls:'exhale', sec:6},
+    ];
+    let pi = 0;
+    let psLeft = phases[0].sec;
+
+    const setPhase = ()=>{
+      const p = phases[pi];
+      if(circle){
+        circle.classList.remove('inhale','hold','exhale');
+        circle.classList.add(p.cls);
+      }
+      if(phaseEl){
+        phaseEl.textContent = (this.lang === 'ar') ? p.nameAr : p.nameEn;
+      }
+    };
+    setPhase();
+
+    this._breathTimer = setInterval(()=>{
+      left -= 1;
+      psLeft -= 1;
+
+      if(timerEl) timerEl.textContent = fmt(Math.max(left,0));
+      if(left <= 0){
+        this.stopBreathing(true);
+        return;
+      }
+
+      if(psLeft <= 0){
+        pi = (pi + 1) % phases.length;
+        psLeft = phases[pi].sec;
+        setPhase();
+      }
+    }, 1000);
+  }
+
+  stopBreathing(resetText){
+    const circle = this.$('breathCircle');
+    const phaseEl = this.$('breathPhase');
+    const timerEl = this.$('breathTimer');
+    const startBtn = this.$('breathStartBtn');
+    const stopBtn = this.$('breathStopBtn');
+
+    if(this._breathTimer){
+      clearInterval(this._breathTimer);
+      this._breathTimer = null;
+    }
+    if(circle){
+      circle.classList.remove('inhale','hold','exhale');
+    }
+    if(phaseEl){
+      phaseEl.textContent = resetText ? ((this.lang === 'ar') ? 'تمام ✅' : 'Done ✅') : ((this.lang === 'ar') ? 'جاهز' : 'Ready');
+    }
+    if(timerEl){
+      timerEl.textContent = '02:00';
+    }
+    if(startBtn) startBtn.style.display = 'inline-block';
+    if(stopBtn) stopBtn.style.display = 'none';
+  }
+
+  checkEmergencyFromReport(report){
+    // Only meaningful if depression domain exists in this run.
+    const hasDep = (report.qList || []).some(q => q.d === 'depression');
+    if(!hasDep) return;
+
+    // If Q9 (depression id=9) is answered high (>=2), escalate.
+    let q9Idx = -1;
+    (report.qList || []).forEach((q,i)=>{ if(q.id === 9) q9Idx = i; });
+    const q9 = q9Idx >= 0 ? (report.answers || [])[q9Idx] : 0;
+    if(typeof q9 === 'number' && q9 >= 2){
+      this.showEmergencyModal();
+    }
+  }
+
+  showEmergencyModal(){
+    const bd = this.$('emergencyBackdrop');
+    if(!bd) return;
+    bd.classList.remove('hidden');
+
+    const close = this.$('emCloseBtn');
+    const breathe = this.$('emBreatheBtn');
+
+    if(close){
+      close.onclick = ()=> bd.classList.add('hidden');
+    }
+    if(breathe){
+      breathe.onclick = ()=> {
+        bd.classList.add('hidden');
+        this.showSection('result');
+        const bw = this.$('breathingWidget');
+        if(bw){
+          bw.style.display = 'block';
+          bw.scrollIntoView({behavior:'smooth', block:'start'});
+          setTimeout(()=> this.startBreathing(), 350);
+        }
+      };
+    }
+  }
+    buildReferralText(report){
+    const isAr = this.lang === 'ar';
+    const name = report?.user?.name || (isAr ? 'مستخدم' : 'User');
+    const date = new Date(report.date).toLocaleString(this.lang);
+    const modelName = this.model?.config?.name?.[this.lang] || 'Mo’een';
+
+    // pick top domain
+    const domains = report?.results || {};
+    const sorted = Object.keys(domains).sort((a,b)=> (domains[b]||0) - (domains[a]||0));
+    const top = sorted[0] || '';
+    const topLabel = top ? this.model.config.domains[top][this.lang] : (isAr ? 'غير محدد' : 'N/A');
+    const topVal = top ? (domains[top]||0) : 0;
+
+    const overall = report?.finalScore ?? 0;
+    const sev = getClinicalLevel(overall, this.lang, this.model);
+
+    // suggested specialist
+    let specialist = isAr ? 'أخصائي نفسي' : 'Psychologist';
+    if(top === 'depression' || top === 'trauma') specialist = isAr ? 'طبيب نفسي' : 'Psychiatrist';
+    if(top === 'ocd') specialist = isAr ? 'أخصائي CBT / طبيب نفسي' : 'CBT therapist / Psychiatrist';
+
+    const bullets = [
+      isAr ? `الاسم: ${name}` : `Name: ${name}`,
+      isAr ? `التاريخ: ${date}` : `Date: ${date}`,
+      isAr ? `نتيجة عامة: ${sev} (${overall}%)` : `Overall: ${sev} (${overall}%)`,
+      isAr ? `أعلى مجال: ${topLabel} (${topVal}%)` : `Top domain: ${topLabel} (${topVal}%)`,
+      isAr ? `مقترح: ${specialist}` : `Suggested: ${specialist}`,
+      isAr ? `ملاحظة: هذا تقرير تقييم ذاتي للتوجيه وليس تشخيصًا.` : `Note: Self-assessment for guidance, not a diagnosis.`
+    ];
+
+    return (isAr
+      ? `مرحبًا دكتور/دكتورة،
+أنا استخدمت ${modelName} لتقييم ذاتي سريع وأحتاج استشارة.
+
+${bullets.map(b=>'• '+b).join('\n')}
+
+ملخص قصير من المستخدم:
+(اكتب هنا أهم الأعراض/المدة/أي شيء مهم)`
+      : `Hello Doctor,
+I used ${modelName} for a quick self-assessment and would like a consultation.
+
+${bullets.map(b=>'• '+b).join('\n')}
+
+Short user summary:
+(Write main symptoms/duration/anything important)`
+    );
+  }
+
+  bindDoctorConnect(){
+    if(this._docBound) return;
+    this._docBound = true;
+
+    const copyBtn = this.$('docCopyBtn');
+    const waBtn = this.$('docWhatsappBtn');
+    const emailBtn = this.$('docEmailBtn');
+    const cityInput = this.$('docCityInput');
+    const specSelect = this.$('docSpecSelect');
+    const extBtn = this.$('docExternalSearchBtn');
+
+    copyBtn && (copyBtn.onclick = async ()=>{
+      const txt = this.$('docReferralText')?.value || '';
+      try{
+        await navigator.clipboard.writeText(txt);
+        copyBtn.textContent = (this.lang==='ar') ? '✅ تم النسخ' : '✅ Copied';
+        setTimeout(()=> copyBtn.textContent = (this.lang==='ar') ? '📋 نسخ الرسالة' : '📋 Copy', 1200);
+      }catch(_){
+        alert(this.lang==='ar' ? 'لم يتم النسخ. جرّب يدويًا.' : 'Copy failed. Please copy manually.');
+      }
+    });
+
+    
+// Update directory + external search (best-effort)
+const updateSearch = ()=>{
+  const report = this.currentReport || {results:{}, finalScore:0, date:Date.now(), user:{}};
+  this.renderDoctorDirectory(report);
+
+  if(extBtn){
+    const city = (cityInput?.value || '').trim();
+    const spec = specSelect?.value || 'psychiatrist';
+    const q = encodeURIComponent((spec==='psychiatrist'?'طبيب نفسي':'أخصائي نفسي') + (city?(' '+city):''));
+    extBtn.href = `https://www.google.com/search?q=${q}`;
+  }
+};
+cityInput && (cityInput.oninput = updateSearch);
+specSelect && (specSelect.onchange = updateSearch);
+
+const feeSelect = this.$('docFeeSelect');
+const searchInput = this.$('docSearchInput');
+feeSelect && (feeSelect.onchange = updateSearch);
+searchInput && (searchInput.oninput = updateSearch);
+
+updateSearch();
+
+    // WA link + email link update happens in updateDoctorConnect()
+  }
+
+  updateDoctorConnect(report){
+    const card = this.$('doctorConnectCard');
+    if(!card) return;
+
+    const isAr = this.lang === 'ar';
+
+    // Show for moderate+ OR if emergency was triggered
+    const show = (report.finalScore >= this.model.config.cutoffs.moderate);
+    card.style.display = show ? 'block' : 'none';
+    if(!show) return;
+
+    // Localize labels quickly
+    const t1 = this.$('docConnectTitle');
+    const t2 = this.$('docConnectSub');
+    const copyBtn = this.$('docCopyBtn');
+    if(t1) t1.textContent = isAr ? '🩺 تواصل مع مختص' : '🩺 Contact a specialist';
+    if(t2) t2.textContent = isAr
+      ? 'معين لا يُغني عن الطبيب. جهّزنا لك رسالة مختصرة تقدر تبعتها لدكتور عبر واتساب أو إيميل.'
+      : 'Mo’een doesn’t replace a clinician. We prepared a short referral message you can send via WhatsApp or email.';
+    if(copyBtn) copyBtn.textContent = isAr ? '📋 نسخ الرسالة' : '📋 Copy';
+
+    // Build referral message
+    const msg = this.buildReferralText(report);
+    const ta = this.$('docReferralText');
+    if(ta) ta.value = msg;
+
+    // WhatsApp link (no phone number; user chooses doctor)
+    const wa = this.$('docWhatsappBtn');
+    if(wa){
+      wa.textContent = isAr ? 'واتساب' : 'WhatsApp';
+      wa.href = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    }
+
+    // Email link
+    const em = this.$('docEmailBtn');
+    if(em){
+      em.textContent = isAr ? 'إيميل' : 'Email';
+      const subject = isAr ? 'طلب استشارة (Mo’een Referral)' : 'Consultation request (Mo’een Referral)';
+      em.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(msg)}`;
+    }
+
+    this.bindDoctorConnect();
+  }
+
+getDoctorDirectory(){
+  // Demo dataset (Egypt-focused). Replace with DB later (Railway).
+  return [
+    {nameAr:'د/ أحمد سامي', nameEn:'Dr. Ahmed Samy', spec:'psychiatrist', cityAr:'القاهرة', cityEn:'Cairo', clinicAr:'عيادة المعادي', clinicEn:'Maadi Clinic', fee:650, wa:'+201000000001', email:'clinic1@example.com', rating:4.7},
+    {nameAr:'د/ مريم حسن', nameEn:'Dr. Mariam Hassan', spec:'psychiatrist', cityAr:'الجيزة', cityEn:'Giza', clinicAr:'الدقي', clinicEn:'Dokki', fee:500, wa:'+201000000002', email:'clinic2@example.com', rating:4.5},
+    {nameAr:'أ/ يوسف علي', nameEn:'Youssef Ali', spec:'psychologist', cityAr:'الإسكندرية', cityEn:'Alexandria', clinicAr:'سموحة', clinicEn:'Smouha', fee:350, wa:'+201000000003', email:'clinic3@example.com', rating:4.6},
+    {nameAr:'أ/ نهى إبراهيم', nameEn:'Noha Ibrahim', spec:'psychologist', cityAr:'القاهرة', cityEn:'Cairo', clinicAr:'مدينة نصر', clinicEn:'Nasr City', fee:300, wa:'+201000000004', email:'clinic4@example.com', rating:4.4},
+    {nameAr:'أ/ محمود رجب', nameEn:'Mahmoud Ragab', spec:'counselor', cityAr:'الشرقية', cityEn:'Sharqia', clinicAr:'الزقازيق', clinicEn:'Zagazig', fee:200, wa:'+201000000005', email:'clinic5@example.com', rating:4.3},
+    {nameAr:'د/ خالد عبد الله', nameEn:'Dr. Khaled Abdallah', spec:'psychiatrist', cityAr:'المنصورة', cityEn:'Mansoura', clinicAr:'شارع الجمهورية', clinicEn:'El Gomhoria St.', fee:700, wa:'+201000000006', email:'clinic6@example.com', rating:4.8},
+    {nameAr:'أ/ سارة عبد الرحمن', nameEn:'Sara Abdelrahman', spec:'psychologist', cityAr:'طنطا', cityEn:'Tanta', clinicAr:'شارع البحر', clinicEn:'El Bahr St.', fee:280, wa:'+201000000007', email:'clinic7@example.com', rating:4.2},
+    {nameAr:'أ/ محمد شريف', nameEn:'Mohamed Sherif', spec:'counselor', cityAr:'القاهرة', cityEn:'Cairo', clinicAr:'شبرا', clinicEn:'Shubra', fee:180, wa:'+201000000008', email:'clinic8@example.com', rating:4.1},
+  ];
+}
+
+renderDoctorDirectory(report){
+  const list = this.$('docDirectoryList');
+  if(!list) return;
+
+  const isAr = this.lang === 'ar';
+  const data = this.getDoctorDirectory();
+
+  const city = (this.$('docCityInput')?.value || '').trim();
+  const spec = (this.$('docSpecSelect')?.value || 'psychiatrist');
+  const fee = (this.$('docFeeSelect')?.value || 'any');
+  const q = (this.$('docSearchInput')?.value || '').trim().toLowerCase();
+
+  const inCity = (d)=>{
+    if(!city) return true;
+    const c = isAr ? d.cityAr : d.cityEn;
+    return (c || '').includes(city);
+  };
+
+  const inFee = (d)=>{
+    if(fee === 'any') return true;
+    if(fee === '800+') return d.fee >= 800;
+    const parts = fee.split('-');
+    const a = parseInt(parts[0],10);
+    const b = parseInt(parts[1],10);
+    return d.fee >= a && d.fee <= b;
+  };
+
+  const inQuery = (d)=>{
+    if(!q) return true;
+    const s = (isAr ? (d.nameAr + ' ' + d.clinicAr) : (d.nameEn + ' ' + d.clinicEn)).toLowerCase();
+    return s.includes(q);
+  };
+
+  const specLabel = (v)=>{
+    if(v==='psychiatrist') return isAr ? 'طبيب نفسي' : 'Psychiatrist';
+    if(v==='psychologist') return isAr ? 'أخصائي نفسي' : 'Psychologist';
+    return isAr ? 'إرشاد/استشارات' : 'Counselor';
+  };
+
+  let filtered = data
+    .filter(d => d.spec === spec)
+    .filter(inCity)
+    .filter(inFee)
+    .filter(inQuery)
+    .sort((a,b)=> (b.rating||0) - (a.rating||0));
+
+  list.innerHTML = '';
+  if(filtered.length === 0){
+    list.innerHTML = `<div class="text-muted" style="text-align:center;">${isAr ? 'لا يوجد نتائج مطابقة. جرّب تغيّر الفلاتر.' : 'No matches. Try changing filters.'}</div>`;
+    return;
+  }
+
+  const referral = this.$('docReferralText')?.value || this.buildReferralText(report);
+
+  filtered.slice(0,6).forEach(d=>{
+    const card = document.createElement('div');
+    card.className = 'docCard';
+
+    const name = isAr ? d.nameAr : d.nameEn;
+    const cityL = isAr ? d.cityAr : d.cityEn;
+    const clinic = isAr ? d.clinicAr : d.clinicEn;
+
+    const waLink = d.wa ? `https://wa.me/${d.wa.replace(/\D/g,'')}?text=${encodeURIComponent(referral)}` : `https://wa.me/?text=${encodeURIComponent(referral)}`;
+    const subject = isAr ? "طلب استشارة (Moa'een Referral)" : "Consultation request (Moa'een Referral)";
+    const emailTo = d.email || '';
+    const emailLink = `mailto:${encodeURIComponent(emailTo)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(referral)}`;
+
+    card.innerHTML = `
+      <div class="top">
+        <div>
+          <div class="name">${name}</div>
+          <div class="meta">${specLabel(d.spec)} • ${clinic} • ${cityL}</div>
+        </div>
+        <div class="pill good" style="white-space:nowrap;">${(d.rating||0).toFixed(1)} ★</div>
+      </div>
+
+      <div class="docTags">
+        <span class="tag">${isAr ? 'كشف' : 'Fee'}: ${d.fee} ${isAr ? 'ج.م' : 'EGP'}</span>
+        <span class="tag">${isAr ? 'تواصل سريع' : 'Quick contact'}</span>
+      </div>
+
+      <div class="docActions">
+        <a class="btn primary" target="_blank" rel="noopener" href="${waLink}">${isAr ? 'واتساب' : 'WhatsApp'}</a>
+        <a class="btn secondary" href="${emailLink}">${isAr ? 'إيميل' : 'Email'}</a>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+// --- END NEW ---
 
   renderChart(data) {
     const ctx = this.$('resultChart').getContext('2d');
@@ -3461,7 +4144,7 @@ toggleLang() {
   }
 
   renderTrend(current) {
-    let hist = JSON.parse(storage.getItem(this.getHistoryKey()) || '[]');
+    let hist = safeJsonParse(storage.getItem(this.getHistoryKey()), []);
     // Filter history by the current user's name
     const prevResults = hist.filter(h => h.id !== current.id && h.user.name === current.user.name); 
 
@@ -3523,7 +4206,7 @@ toggleLang() {
     this.showSection('history');
     const list = this.$('historyList');
     list.innerHTML = '';
-    const hist = JSON.parse(storage.getItem(this.getHistoryKey()) || '[]').reverse(); 
+    const hist = safeJsonParse(storage.getItem(this.getHistoryKey()), []).reverse(); 
     
     // NEW: Render the chart first
     this.renderHistoryChart(hist);
@@ -3633,7 +4316,7 @@ toggleLang() {
   // END NEW: History Trend Chart Render
 
   loadResultFromHistoryById(id) {
-    const hist = JSON.parse(storage.getItem(this.getHistoryKey()) || '[]');
+    const hist = safeJsonParse(storage.getItem(this.getHistoryKey()), []);
     const report = hist.find(h => h.id === id);
     if (report) {
       this.renderResult(report);
@@ -3644,7 +4327,7 @@ toggleLang() {
   
   // --- NATIVE PRINT GENERATION (FIX FOR ARABIC FONT) ---
   loadResultAndPrint(id) {
-    const hist = JSON.parse(storage.getItem(this.getHistoryKey()) || '[]');
+    const hist = safeJsonParse(storage.getItem(this.getHistoryKey()), []);
     const report = hist.find(h => h.id === id);
     if (report) {
       this.renderResult(report);
@@ -3704,7 +4387,7 @@ ${links}
   }
 
   exportSingleResult(id) {
-      const hist = JSON.parse(storage.getItem(this.getHistoryKey()) || '[]');
+      const hist = safeJsonParse(storage.getItem(this.getHistoryKey()), []);
       const item = hist.find(h => h.id === id);
 
       if (!item) {
@@ -3726,7 +4409,7 @@ ${links}
   }
   
   exportAllHistory() {
-      const hist = JSON.parse(storage.getItem(this.getHistoryKey()) || '[]');
+      const hist = safeJsonParse(storage.getItem(this.getHistoryKey()), []);
       const data = JSON.stringify(hist, null, 2);
       const blob = new Blob([data], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -3740,7 +4423,7 @@ ${links}
   
   // NEW: Export History to CSV Function
   exportAllHistoryCSV() {
-    const hist = JSON.parse(storage.getItem(this.getHistoryKey()) || '[]');
+    const hist = safeJsonParse(storage.getItem(this.getHistoryKey()), []);
     if (hist.length === 0) {
         alert(this.lang === 'ar' ? 'لا يوجد سجلات لتصديرها.' : 'No records to export.');
         return;
@@ -3896,19 +4579,6 @@ if (document.readyState === 'loading') {
   boot();
 }
 
-// --- PWA Service Worker Registration ---
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js')
-      .then(registration => {
-        console.log('ServiceWorker registration successful with scope: ', registration.scope);
-      })
-      .catch(error => {
-        console.log('ServiceWorker registration failed: ', error);
-      });
-  });
-}
-// --- END PWA Service Worker Registration ---
 </script>
 
 <!-- ===== AI CHAT OPTION (does not change existing UI) ===== -->
